@@ -61,8 +61,6 @@ def get_all_semester_offers_from_page(driver, semester, course):
     return semester_offers
 
 
-# TODO handle case when there is no classroom
-#  it can happen
 def extract_timeslots_from_reuniones(reunion_data):
     timeslot_list = []
     classroom = ''
@@ -123,10 +121,6 @@ def course_catalog_search(driver: WebDriver):
     course_catalog_btn.click()
     semesters = get_active_semesters_and_parse(driver)
     course_list = sql_scripts.get_course_list()
-
-    # TODO REMEMBER TO HANDLE PROFESSOR TEACHES RELATION -> (SO_ID, P_ID),
-    #  I HAVE TO ADD THIS WHEN I CREATE A SEMESTER OFFER,
-    #  WHILE AT IT MAYBE CREATE A LIST OF PROFESSORS NOT FOUND IN PREMADB TO INNVESTIGATE LATER..
 
     for semester in semesters:
         print(semester)

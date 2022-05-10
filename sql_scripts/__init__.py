@@ -69,7 +69,7 @@ def create_semester_offer_timeslots(semester_offer, semester_offer_id):
 
     for timeslot in semester_offer.slots:
         insert_values += '''( \'%s\'::time, \'%s\'::time, %d, %d ),''' % (
-        timeslot.start_time, timeslot.end_time, semester_offer_id, timeslot.day_id)
+            timeslot.start_time, timeslot.end_time, semester_offer_id, timeslot.day_id)
     insert_values = insert_values[:-1]
     insert_query = " INSERT INTO \"TimeSlot\" (ts_start_time, ts_end_time, so_id, d_id) VALUES %s" % (insert_values,)
     with connection.cursor() as curr:
@@ -121,13 +121,8 @@ def create_professor(semester_offer):
     professor_names = tuple(semester_offer.professor)
     insert_value = ''
     for professor_name in professor_names:
-        insert_value += '''( \'%s\',), ''' % ( professor_name,)
+        insert_value += '''( \'%s\',), ''' % (professor_name,)
     query = ''' INSERT INTO "Professor" VALUES  %s  RETURNING p_id''' % insert_value
     with connection.cursor() as curr:
         curr.execute(query)
         return curr.fetchall()
-
-
-
-
-
