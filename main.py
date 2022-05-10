@@ -7,8 +7,10 @@ from PageObjects.home_and_login import home_and_login
 
 
 def main():
-    option = webdriver.ChromeOptions()
-    driver = webdriver.Chrome(options=option)
+    chromedriver = "/Users/joserivera/chromedriver"
+    options = webdriver.ChromeOptions()
+    #options.headless = True
+    driver = webdriver.Chrome(chromedriver, options=options)
     home_and_login(driver)
     course_catalog_search(driver)
     driver.close()
