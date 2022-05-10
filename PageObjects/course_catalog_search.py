@@ -4,6 +4,7 @@ from selenium.webdriver.chrome.webdriver import WebDriver
 from selenium.webdriver.common.by import By
 
 import sql_scripts
+from Models.Semesteroffer import SemesterOfferTableData, TimeSlotTableData
 
 term_to_premadb_convert = {
     "2": 1,  # Fall
@@ -60,46 +61,60 @@ def get_all_semester_offers_from_page(driver, semester, course):
     return semester_offers
 
 
-# Some string manipulation
+# TODO handle case when there is no classroom
+#  it can happen
+def extract_timeslots_from_reuniones(reunion_data):
+    timeslot_list = []
+    classroom = ''
+    for reunion in reunion_data:
+        if len(reunion) == 0:
+            continue
+        reunion_pieces = reunion.split(' ')
+        reunion_pieces = list(filter(lambda a: a != '', reunion_pieces))
+        try:
+            classroom = reunion_pieces[6] + reunion_pieces[7]
+        except:
+            classroom = ''
+
+        for day in reunion_pieces[5]:
+            timeslot_list.append(TimeSlotTableData(start_time=reunion_pieces[0] + reunion_pieces[1],
+                                                   end_time=reunion_pieces[3] + reunion_pieces[4],
+                                                   day_id=rumad_day_to_prema_day_convert[day]))
+    return timeslot_list, classroom
+
+
 def extract_semester_offer_from_table_helper(table_data, semester, course):
     section = table_data[0].accessible_name[9:]
     capacity = int(table_data[1].accessible_name)
-    professor = table_data[5].accessible_name
-    string_pieces = table_data[4].accessible_name.split(' ')
-    if section[-1] != 'D':
-        try:
-            start_time = string_pieces[0] + string_pieces[1]
-            end_time = string_pieces[3] + string_pieces[4]
-            classroom = string_pieces[-2].strip() + string_pieces[-1]
-            days = string_pieces[5].strip()
-            days_id_list = []
-            for day in days:
-                days_id_list.append(rumad_day_to_prema_day_convert[day])
-            semester_offer_has_reunion = True
-        except:
-            start_time, end_time, classroom, days_id_list = None
-            print('Error with the following data: ' + str(table_data[4].accessible_name))
-            print('The following Course: ' + str(course) + 'does not have a physcial reunions. It is probably using '
-                                                           'distance modality.')
+    professor_list = table_data[5].text.split('/n') if table_data[5].text != '' else []
+    time_slot_list, classroom = extract_timeslots_from_reuniones(table_data[4].text.split('/n'))
 
-    return section, capacity, start_time, end_time, classroom, professor, days_id_list
+    return SemesterOfferTableData(section=section, capacity=capacity, professor=professor_list, classroom=classroom,
+                                  slots=time_slot_list)
 
 
-def semester_offer_data_exists_in_prod(semester_offer_data, semester_id, course_id):
-    return sql_scripts.semester_offer_data_exists_in_prod(semester_offer_data, semester_id, course_id)
+def semester_offer_data_exists_in_prod(semester_offer, semester_id, course_id):
+    return sql_scripts.semester_offer_data_exists_in_prod(semester_offer, semester_id, course_id)
 
 
-def remove_and_create_timelots(semester_offer_data):
-    pass
+def update_semester_offer(semester_offer, so_id, semester_id):
+    sql_scripts.update_semester_offer(semester_offer, so_id, semester_id)
 
 
-def create_semesterOffer_with_timeslots(semester_offer_data, semester_id, course_id):
-    semester_offer_id = sql_scripts.create_semester_offer(semester_offer_data, semester_id, course_id)
-    sql_scripts.create_semester_offer_timeslots(semester_offer_data, semester_offer_id)
+def remove_and_create_timelots(semester_offer, so_id):
+    sql_scripts.remove_timeslots(so_id)
+    if semester_offer.slots is not None and len(semester_offer.slots) > 0:
+        sql_scripts.create_semester_offer_timeslots(semester_offer, so_id)
 
 
-def handle_semester_offer_without_reunions(semester_offer_data):
-    pass
+def create_semesterOffer_with_timeslots(semester_offer, semester_id, course_id):
+    semester_offer_id = sql_scripts.create_semester_offer(semester_offer, semester_id, course_id)
+    professor_id = sql_scripts.get_professor_id(semester_offer)
+    professor_id = sql_scripts.create_professor(semester_offer) if professor_id == -1 else professor_id
+
+    sql_scripts.add_professor_teaches(semester_offer_id, professor_id)
+    if semester_offer.slots is not None and len(semester_offer.slots) > 0:
+        sql_scripts.create_semester_offer_timeslots(semester_offer, semester_offer_id)
 
 
 def course_catalog_search(driver: WebDriver):
@@ -114,25 +129,24 @@ def course_catalog_search(driver: WebDriver):
     #  WHILE AT IT MAYBE CREATE A LIST OF PROFESSORS NOT FOUND IN PREMADB TO INNVESTIGATE LATER..
 
     for semester in semesters:
+        print(semester)
         semester_id = get_or_create_semester_return_id(semester)
+        course_count = 0
         for course in course_list:
-            time.sleep(2)
+            course_count += 1
+            print(course_count)
+            time.sleep(0.2)
             url = build_search_course_url(semester, course)
             driver.get(url)
-            semester_offer_data_list = get_all_semester_offers_from_page(driver, semester, course)
+            semester_offer_list = get_all_semester_offers_from_page(driver, semester, course)
 
-            if len(semester_offer_data_list) == 0:
+            if len(semester_offer_list) == 0:
                 continue
 
-            for semester_offer_data in semester_offer_data_list:
-                # TODO handle different cases of semester Offers, some might not have times,
-                #  others might have times but no classrooms, etc... Special cases
-                #  this cases will mainly be addressed inside extract_semester_offer_from_table_helper
-                if semester_offer_data[2] is None:
-                    handle_semester_offer_without_reunions(semester_offer_data)
-                    continue
-                so_id = semester_offer_data_exists_in_prod(semester_offer_data, semester_id, course[1])
+            for semester_offer in semester_offer_list:
+                so_id = semester_offer_data_exists_in_prod(semester_offer, semester_id, course[1])
                 if so_id > -1:
-                    remove_and_create_timelots(semester_offer_data, so_id)
+                    update_semester_offer(semester_offer, so_id, semester_id)
+                    remove_and_create_timelots(semester_offer, so_id)
                     continue
-                create_semesterOffer_with_timeslots(semester_offer_data, semester_id, course[1])
+                create_semesterOffer_with_timeslots(semester_offer, semester_id, course[1])

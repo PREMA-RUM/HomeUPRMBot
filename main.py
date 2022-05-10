@@ -4,6 +4,7 @@ from selenium import webdriver
 
 from PageObjects.course_catalog_search import course_catalog_search
 from PageObjects.home_and_login import home_and_login
+import sql_scripts
 
 
 def main():
@@ -14,6 +15,7 @@ def main():
     home_and_login(driver)
     course_catalog_search(driver)
     driver.close()
+    sql_scripts.connection.commit()
 
 
 # Press the green button in the gutter to run the script.
