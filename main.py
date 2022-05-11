@@ -7,15 +7,21 @@ from PageObjects.home_and_login import home_and_login
 import sql_scripts
 
 
+# TODO Change professor varchar limit to 100 on prod DB
 def main():
-    chromedriver = "/Users/joserivera/chromedriver"
-    options = webdriver.ChromeOptions()
-    options.headless = True
-    driver = webdriver.Chrome(chromedriver, options=options)
-    home_and_login(driver)
-    course_catalog_search(driver)
-    driver.close()
-    sql_scripts.connection.commit()
+    try:
+
+        chromedriver = "/Users/joserivera/chromedriver"
+        options = webdriver.ChromeOptions()
+        options.headless = True
+        driver = webdriver.Chrome(chromedriver, options=options)
+        home_and_login(driver)
+        course_catalog_search(driver)
+        driver.close()
+    except BaseException as e:
+        print("Something failed", str(e))
+    finally:
+        sql_scripts.connection.close()
 
 
 # Press the green button in the gutter to run the script.

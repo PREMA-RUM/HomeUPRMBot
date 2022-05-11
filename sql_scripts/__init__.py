@@ -111,26 +111,30 @@ def add_professor_teaches(semester_offer_id, professor_ids):
 def get_professor_id(semester_offer):
     professor_values = ''
     final_result = []
+    professors_in_prod = []
     for professor in semester_offer.professor:
         professor_values += professor + ','
     professor_values = professor_values[:-1]
     query = '''
-               SELECT p_id FROM "Professor" 
+               SELECT p_id, p_name FROM "Professor" 
                WHERE p_name in (\'%s\') ''' % professor_values
 
     with connection.cursor() as curr:
         curr.execute(query)
-        result = curr.fetchall()
+        result = [x for x in curr.fetchall()]
     for professor_tuple in result:
         final_result.append(professor_tuple[0])
+        professors_in_prod.append(professor_tuple[1])
 
-    return -1 if len(result) == 0 else final_result
+    missing_professor_names = list(set(semester_offer.professor) - set(professors_in_prod))
+
+    return final_result, missing_professor_names
 
 
-def create_professor(semester_offer):
+def create_professor(professors):
     result = -1
     final_result = []
-    professor_names = tuple(semester_offer.professor)
+    professor_names = tuple(professors)
     insert_value = ''
     for professor_name in professor_names:
         insert_value += '''( \'%s\', -1),''' % (professor_name,)

@@ -85,9 +85,10 @@ def extract_semester_offer_from_table_helper(table_data, semester, course):
     section = table_data[0].accessible_name[9:]
     capacity = int(table_data[1].accessible_name)
     professor_list = table_data[5].text.split('\n') if table_data[5].text != '' else []
-    for professor in professor_list:
-        if len(professor) >= 30:
-            print('Estos son dos profesores en uno')
+    for i, professor in enumerate(professor_list):
+        if "'" in professor:
+            print(professor)
+            professor_list[i] = professor.replace("'", "`")
     time_slot_list, classroom = extract_timeslots_from_reuniones(table_data[4].text.split('\n'))
 
     return SemesterOfferTableData(section=section, capacity=capacity, professor=professor_list, classroom=classroom,
@@ -115,8 +116,9 @@ def create_semesterOffer_with_timeslots(semester_offer, semester_id, course_id):
     #TODO ahora mismo, posiblemente puedo perder profesores
 
     if len(semester_offer.professor) > 0:
-        professor_ids = sql_scripts.get_professor_id(semester_offer)
-        professor_ids = sql_scripts.create_professor(semester_offer) if professor_ids == -1 else professor_ids
+        professor_ids, missing_professors = sql_scripts.get_professor_id(semester_offer)
+        if len(missing_professors) > 0:
+            professor_ids += sql_scripts.create_professor(missing_professors)
         sql_scripts.add_professor_teaches(semester_offer_id, professor_ids)
 
     if semester_offer.slots is not None and len(semester_offer.slots) > 0:
@@ -136,9 +138,8 @@ def course_catalog_search(driver: WebDriver):
         course_count = 0
         for course in course_list:
             course_count += 1
-            print(course_count)
-            time.sleep(0.2)
             url = build_search_course_url(semester, course)
+            print('Fetching: ', url, 'Course:', course_count, ' of ', len(course_list))
             driver.get(url)
             semester_offer_list = get_all_semester_offers_from_page(driver, semester, course)
 
@@ -152,3 +153,4 @@ def course_catalog_search(driver: WebDriver):
                     remove_and_create_timelots(semester_offer, so_id)
                     continue
                 create_semesterOffer_with_timeslots(semester_offer, semester_id, course[1])
+        sql_scripts.connection.commit()
