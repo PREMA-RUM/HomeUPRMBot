@@ -10,7 +10,7 @@ import sql_scripts
 def main():
     chromedriver = "/Users/joserivera/chromedriver"
     options = webdriver.ChromeOptions()
-    options.headless = True
+    #options.headless = True
     driver = webdriver.Chrome(chromedriver, options=options)
     home_and_login(driver)
     course_catalog_search(driver)

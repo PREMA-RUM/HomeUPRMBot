@@ -95,34 +95,51 @@ def update_semester_offer(semester_offer, so_id, semester_id):
         curr.execute(query)
 
 
-def add_professor_teaches(semester_offer_id, professor_id):
+def add_professor_teaches(semester_offer_id, professor_ids):
+    professor_values = ''
+    for professor_id in professor_ids:
+        professor_values += '''( %d, %d ),''' % (semester_offer_id, professor_id)
+    professor_values = professor_values[:-1]
+
     query = '''
-                       INSERT INTO "ProfessorTeaches" (so_id,p_id,)
-                       VALUES ( %d, %d)
-                       RETURNING so_id
-                   ''' % (
-        semester_offer_id, professor_id)
+                       INSERT INTO "ProfessorTeaches" (so_id,p_id) VALUES %s RETURNING so_id
+                   ''' % professor_values
     with connection.cursor() as curr:
         curr.execute(query)
 
 
 def get_professor_id(semester_offer):
-    professor_names = tuple(semester_offer.professor)
+    professor_values = ''
+    final_result = []
+    for professor in semester_offer.professor:
+        professor_values += professor + ','
+    professor_values = professor_values[:-1]
     query = '''
                SELECT p_id FROM "Professor" 
-               WHERE p_name in (%s) ''' % (professor_names,)
+               WHERE p_name in (\'%s\') ''' % professor_values
+
     with connection.cursor() as curr:
         curr.execute(query)
         result = curr.fetchall()
-    return -1 if result is None else result
+    for professor_tuple in result:
+        final_result.append(professor_tuple[0])
+
+    return -1 if len(result) == 0 else final_result
 
 
 def create_professor(semester_offer):
+    result = -1
+    final_result = []
     professor_names = tuple(semester_offer.professor)
     insert_value = ''
     for professor_name in professor_names:
-        insert_value += '''( \'%s\',), ''' % (professor_name,)
-    query = ''' INSERT INTO "Professor" VALUES  %s  RETURNING p_id''' % insert_value
+        insert_value += '''( \'%s\', -1),''' % (professor_name,)
+    insert_value = insert_value[:-1]
+    query = ''' INSERT INTO "Professor" (p_name, dept_id)  VALUES  %s  RETURNING p_id''' % insert_value
     with connection.cursor() as curr:
         curr.execute(query)
-        return curr.fetchall()
+        result = curr.fetchall()
+    for professor_tuple in result:
+        final_result.append(professor_tuple[0])
+
+    return final_result
