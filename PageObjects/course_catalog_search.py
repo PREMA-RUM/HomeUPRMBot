@@ -84,11 +84,11 @@ def extract_timeslots_from_reuniones(reunion_data):
 def extract_semester_offer_from_table_helper(table_data, semester, course):
     section = table_data[0].accessible_name[9:]
     capacity = int(table_data[1].accessible_name)
-    professor_list = table_data[5].text.split('/n') if table_data[5].text != '' else []
+    professor_list = table_data[5].text.split('\n') if table_data[5].text != '' else []
     for professor in professor_list:
         if len(professor) >= 30:
-            exit('professor name too loong bruh')
-    time_slot_list, classroom = extract_timeslots_from_reuniones(table_data[4].text.split('/n'))
+            print('Estos son dos profesores en uno')
+    time_slot_list, classroom = extract_timeslots_from_reuniones(table_data[4].text.split('\n'))
 
     return SemesterOfferTableData(section=section, capacity=capacity, professor=professor_list, classroom=classroom,
                                   slots=time_slot_list)
@@ -110,6 +110,9 @@ def remove_and_create_timelots(semester_offer, so_id):
 
 def create_semesterOffer_with_timeslots(semester_offer, semester_id, course_id):
     semester_offer_id = sql_scripts.create_semester_offer(semester_offer, semester_id, course_id)
+
+
+    #TODO ahora mismo, posiblemente puedo perder profesores
 
     if len(semester_offer.professor) > 0:
         professor_ids = sql_scripts.get_professor_id(semester_offer)
