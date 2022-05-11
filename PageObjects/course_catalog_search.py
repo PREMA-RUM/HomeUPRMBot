@@ -101,6 +101,7 @@ def semester_offer_data_exists_in_prod(semester_offer, semester_id, course_id):
 
 def update_semester_offer(semester_offer, so_id, semester_id):
     sql_scripts.update_semester_offer(semester_offer, so_id, semester_id)
+    create_professors_and_professor_teaches(semester_offer, so_id)
 
 
 def remove_and_create_timelots(semester_offer, so_id):
@@ -112,17 +113,18 @@ def remove_and_create_timelots(semester_offer, so_id):
 def create_semesterOffer_with_timeslots(semester_offer, semester_id, course_id):
     semester_offer_id = sql_scripts.create_semester_offer(semester_offer, semester_id, course_id)
 
+    create_professors_and_professor_teaches(semester_offer, semester_offer_id)
 
-    #TODO ahora mismo, posiblemente puedo perder profesores
+    if semester_offer.slots is not None and len(semester_offer.slots) > 0:
+        sql_scripts.create_semester_offer_timeslots(semester_offer, semester_offer_id)
 
+
+def create_professors_and_professor_teaches(semester_offer, semester_offer_id):
     if len(semester_offer.professor) > 0:
         professor_ids, missing_professors = sql_scripts.get_professor_id(semester_offer)
         if len(missing_professors) > 0:
             professor_ids += sql_scripts.create_professor(missing_professors)
         sql_scripts.add_professor_teaches(semester_offer_id, professor_ids)
-
-    if semester_offer.slots is not None and len(semester_offer.slots) > 0:
-        sql_scripts.create_semester_offer_timeslots(semester_offer, semester_offer_id)
 
 
 def course_catalog_search(driver: WebDriver):

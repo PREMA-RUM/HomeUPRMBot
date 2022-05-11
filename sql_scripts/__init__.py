@@ -113,12 +113,13 @@ def get_professor_id(semester_offer):
     final_result = []
     professors_in_prod = []
     for professor in semester_offer.professor:
-        professor_values += professor + ','
+        professor_values += f"'{professor}'" + ','
     professor_values = professor_values[:-1]
-    query = '''
+    query = f'''
                SELECT p_id, p_name FROM "Professor" 
-               WHERE p_name in (\'%s\') ''' % professor_values
+               WHERE p_name in ({professor_values}) '''
 
+    print(query)
     with connection.cursor() as curr:
         curr.execute(query)
         result = [x for x in curr.fetchall()]
@@ -137,7 +138,7 @@ def create_professor(professors):
     professor_names = tuple(professors)
     insert_value = ''
     for professor_name in professor_names:
-        insert_value += '''( \'%s\', -1),''' % (professor_name,)
+        insert_value += '''( \'%s\', null),''' % (professor_name,)
     insert_value = insert_value[:-1]
     query = ''' INSERT INTO "Professor" (p_name, dept_id)  VALUES  %s  RETURNING p_id''' % insert_value
     with connection.cursor() as curr:
