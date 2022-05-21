@@ -133,7 +133,6 @@ def get_professor_id(semester_offer):
 
 
 def create_professor(professors):
-    result = -1
     final_result = []
     professor_names = tuple(professors)
     insert_value = ''
@@ -148,3 +147,11 @@ def create_professor(professors):
         final_result.append(professor_tuple[0])
 
     return final_result
+
+
+def remove_professor_teaches(semester_offer_id):
+    with connection.cursor() as curr:
+        curr.execute('''
+            DELETE FROM "ProfessorTeaches"
+            WHERE so_id=%s
+        ''', (semester_offer_id,))

@@ -121,6 +121,7 @@ def create_semesterOffer_with_timeslots(semester_offer, semester_id, course_id):
 
 def create_professors_and_professor_teaches(semester_offer, semester_offer_id):
     if len(semester_offer.professor) > 0:
+        sql_scripts.remove_professor_teaches(semester_offer_id)
         professor_ids, missing_professors = sql_scripts.get_professor_id(semester_offer)
         if len(missing_professors) > 0:
             professor_ids += sql_scripts.create_professor(missing_professors)

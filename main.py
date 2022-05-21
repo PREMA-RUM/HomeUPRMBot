@@ -6,12 +6,12 @@ from PageObjects.course_catalog_search import course_catalog_search
 from PageObjects.home_and_login import home_and_login
 import sql_scripts
 
+from config import config
 
-# TODO Change professor varchar limit to 100 on prod DB
+
 def main():
     try:
-
-        chromedriver = "/Users/joserivera/chromedriver"
+        chromedriver = config.web_driver
         options = webdriver.ChromeOptions()
         options.headless = True
         driver = webdriver.Chrome(chromedriver, options=options)
